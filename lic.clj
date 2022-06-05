@@ -12,7 +12,10 @@
 
 (def def? (partial seq-starts-with? 'def))
 
-(def env (atom {:globe {'+ + 'fav-num 41}}))
+(def if? (partial seq-starts-with? 'if))
+
+(def env (atom {:globe {'+     + '= = 'list list 'map map 'concat concat
+                        'first first 'second second 'not not 'fav-num 41}}))
 
 (defn lookup-symbol [env-atom sym]
   (let [{:keys [globe]} @env-atom
@@ -31,12 +34,17 @@
   (assert (symbol? k) (format "expected k = %s to be a symbol" k))
   (swap! env assoc-in [:globe k] (user/eval env v)))
 
+(defn eval-if [env [_ tf t f]]
+  (let [et (user/eval env tf)]
+    (user/eval env (if et t f))))
+
 (defn eval [env form]
   (cond
     (literal? form) form
     (quote? form) (second form)
     (symbol? form) (lookup-symbol env form)
     (def? form) (eval-def env form)
+    (if? form) (eval-if env form)
     :else (eval-application env form)))
 
 (comment
@@ -47,4 +55,5 @@
   (eval env (read-string "(+ 1 (+ 1 fav-num))"))
   (eval env (read-string "(def second-fav (+ 1 fav-num))"))
   (eval env (read-string "second-fav"))
+  (eval env (read-string "(if (= fav-num 41) (quote yes) (quote no))"))
   )
