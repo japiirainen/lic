@@ -22,7 +22,7 @@
 
 (defn lookup-symbol [env-atom sym]
   (let [{:keys [globe scope]} @env-atom
-        v (get (merge globe scope) sym)]
+        v (get (merge globe scope {'scope scope}) sym)]
     (assert v (format "expected value for sym = %s" sym))
     v))
 
@@ -34,8 +34,8 @@
                   (vec symbols) (vec args)))
   (into {} (map vector symbols args)))
 
-(defn eval-closure [env [_ symbols body] args]
-  (user/eval (atom (swap! env assoc :scope (assign-vars symbols args))) body))
+(defn eval-closure [env [_ scope symbols body] args]
+  (user/eval (atom (swap! env assoc :scope (merge scope (assign-vars symbols args)))) body))
 
 (defn eval-application [env [f & args]]
   (let [f-evaluated (user/eval env f)]
@@ -66,8 +66,9 @@
   (eval env (read-string "fav-num"))
   (eval env (read-string "(+ 1 1)"))
   (eval env (read-string "(+ 1 (+ 1 fav-num))"))
-  (eval env (read-string "(def second-fav (+ 1 fav-num))"))
-  (eval env (read-string "second-fav"))
+  (do
+    (eval env (read-string "(def second-fav (+ 1 fav-num))"))
+    (eval env (read-string "second-fav")))
   (eval env (read-string "(if (= fav-num 41) (quote yes) (quote no))"))
-  (eval env (read-string "((clo (x) (+ x fav-num)) 2)"))
+  (eval env (read-string "(((clo nil (x) (list (quote clo) scope (quote (y)) (quote (+ y x)))) 2) 4)"))
   )
